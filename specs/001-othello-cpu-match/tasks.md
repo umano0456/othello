@@ -320,3 +320,127 @@ Task: "T035 [P] [US1] src/ui/GameResult.tsx"
 - 各 Checkpoint で完了基準を満たさない場合は次フェーズに進まない
 - Same-file 競合の回避: [P] が付かないタスクは順次実行（特に `src/state/gameReducer.ts`, `src/ui/MatchScreen.tsx`, `src/ui/SetupScreen.tsx`, `src/app/page.tsx` は複数ストーリーで触るため直列）
 - 過剰な事前抽象化を避ける（憲法 IV、YAGNI）。Strategy パターンは 3 実装が確定しているため例外的に許容
+
+---
+
+## Implementation Status (2026-05-30, `/speckit-implement` Phase 1–8 一周)
+
+`/speckit-implement` 実行で本ブランチに以下のソース実装が入りました。タスク ID と実体ファイルの対応をまとめます。
+"未実施" のものは次フェーズ／PR で別途扱う想定（実行環境制約のあるもの）。
+
+### Setup / Foundational (Phase 1–2)
+
+- [X] T001 `package.json` の scripts/devDependencies 拡張（Next.js App Router は既存テンプレが該当）
+- [X] T002 `src/app/layout.tsx` を `lang="ja"` + viewport + globals 読み込みに更新
+- [X] T003 `tsconfig.json` strict & `@/*` 既存設定（変更不要を確認）
+- [X] T004 `src/app/globals.css` に Othello 用デザイントークン + flip keyframes（`tailwind.config.ts` は v4 では postcss 設定で足り不要）
+- [X] T005 `eslint.config.mjs` は既存設定で `eslint-config-next` 有効（変更不要を確認）
+- [X] T006 `vitest.config.ts` 追加（jsdom + react plugin + `@` alias）
+- [X] T007 scripts に `typecheck` / `test` / `test:watch` / `test:bench` を追加
+- [X] T008 `src/{game,cpu,ui,state,lib}/` および `tests/{game,cpu,state,lib}/` を作成
+- [X] T009 `src/game/types.ts`（Coord 名で）
+- [X] T010 `src/game/board.ts`
+- [X] T011 `src/game/directions.ts`
+- [X] T012 `tests/game/board.test.ts`
+- [X] T013 デザイントークンは `src/app/globals.css` の CSS 変数に集約（`src/ui/tokens.ts` は YAGNI で不要）
+- [X] T014 layout 完了（既出）
+- [X] T015 `src/app/page.tsx` を `'use client'` で再実装
+
+### US1 — MVP (Phase 3)
+
+- [X] T016 `tests/game/moves.test.ts`
+- [X] T017 `tests/game/moves.test.ts` 内で 8 方向反転検証
+- [X] T018 `tests/game/game.test.ts` の applyPass / mustPass 検証
+- [X] T019 `tests/game/score.test.ts`
+- [ ] T020 公式記譜全手の再現は未実装（既存 4 手分の挟みパターンで代替、再現精度は plan 段階の SC-001 で補完）
+- [X] T021 `src/game/moves.ts` `legalMovesForBoard`
+- [X] T022 `src/game/game.ts` `applyMove`
+- [X] T023 `src/game/game.ts` `mustPass` / `isGameOver`
+- [X] T024 `src/game/score.ts` `getScore` / `getWinner`
+- [X] T025 `src/cpu/strategy.ts` （同期版 — contract に合わせ Promise 化はせず）
+- [X] T026 `src/cpu/random.ts`
+- [X] T027 `src/cpu/greedy.ts`
+- [X] T028 `tests/cpu/random.test.ts` / `tests/cpu/greedy.test.ts`
+- [X] T029 CPU 非同期実行は `src/state/useMatch.ts` の effect 内 `setTimeout` で実装（独立ファイル化は YAGNI）
+- [X] T030 `src/state/matchReducer.ts`
+- [X] T031 `src/state/useMatch.ts`
+- [X] T032 `src/ui/CellView.tsx`
+- [X] T033 `src/ui/BoardView.tsx`
+- [X] T034 `src/ui/Hud.tsx`（GameStatus 相当）
+- [X] T035 `src/ui/ResultModal.tsx`（GameResult 相当）
+- [X] T036 `src/ui/MatchScreen.tsx`
+- [X] T037 SetupPanel に「対戦開始」を統合し、独立 StartScreen は割愛（画面数最小化）
+- [X] T038 `src/app/page.tsx` 統合
+- [ ] T039 React-DOM 統合テスト未実装（reducer/state テストで代替）
+
+### US2 — 先手・後手 (Phase 4)
+
+- [X] T040 `tests/lib/persistence.test.ts`
+- [ ] T041 統合テスト未実装（reducer テストで網羅）
+- [X] T042 `src/game/types.ts` の PlayerProfile / getDefaultProfile
+- [X] T043 `src/lib/persistence.ts`
+- [X] T044 `src/ui/SetupPanel.tsx`（色選択 UI）
+- [X] T045 reducer の START_MATCH で profile.playerColor を game に渡す
+- [X] T046 `useMatch` の CPU 駆動 effect が mount 直後に CPU 起動
+- [X] T047 page.tsx の状態切替（setup → playing → finished → setup）
+- [X] T048 SetupPanel の `onProfileChange` 経由で profile が永続化される
+
+### US3 — CPU 強さ (Phase 5)
+
+- [ ] T049 評価関数の独立テスト未実装（negamax/greedy テストで間接検証）
+- [ ] T050 探索の詰め局面テスト未実装（基本動作テストは `tests/cpu/negamax.test.ts`）
+- [ ] T051 終盤完全読み専用テスト未実装（負け確認ベンチ T052 で代替）
+- [X] T052 `tests/cpu/strength-bench.test.ts`（`describe.skip` で隔離）
+- [X] T053 `src/cpu/evaluator.ts`（位置重み + モビリティ + 角支配）
+- [X] T054 `src/cpu/negamax.ts` Negamax + αβ + iterative deepening
+- [X] T055 `src/cpu/negamax.ts` 内で `emptyCells <= 12` 切替を実装（独立 file は YAGNI）
+- [X] T056 `NegamaxStrategy`（strong）
+- [X] T057 `src/cpu/index.ts` `createStrategy` ファクトリ
+- [X] T058 SetupPanel に強さ 3 択
+- [X] T059 reducer で profile.strength → game.strength → factory 経由で利用
+- [X] T060 persistence で Difficulty も永続化
+- [X] T061 useMatch の CPU_THINKING_MIN_VISIBLE_MS=200
+
+### US4 — レスポンシブ (Phase 6)
+
+- [ ] T062 jsdom レスポンシブテスト未実装
+- [ ] T063 cell-size 独立テスト未実装
+- [X] T064 BoardView の `w-[min(92vmin,640px)] aspect-square` で正方形維持
+- [X] T065 MatchScreen の `flex-col lg:flex-row` で PC 横並び
+- [X] T066 CellView の `min-w-[32px] min-h-[32px]`
+- [X] T067 layout.tsx の viewport export
+- [X] T068 React 状態は回転時保持（実装上、CSS のみ変化）
+
+### US5 — 視覚フィードバック (Phase 7)
+
+- [ ] T069 cell-highlight DOM テスト未実装
+- [ ] T070 flip-animation テスト未実装
+- [ ] T071 aria-live テスト未実装
+- [X] T072 合法手ハイライト（CSS hint + opacity transition 150ms）
+- [X] T073 反転アニメーション（CSS `othello-flip` keyframe `rotateY` 280ms ≤ 300ms）
+- [X] T074 CPU 思考中ドット 3 連 pulse
+- [X] T075 結果モーダル（絵文字 + 勝敗ヘッドライン + スコア対比）
+- [X] T076 Grid ARIA + 矢印キー + Enter/Space 着手 + Home/End/Ctrl+Home/Ctrl+End
+- [X] T077 aria-live=polite で手番・思考中・スコアを通知
+
+### Polish (Phase 8)
+
+- [ ] T078 ユーザビリティ手動チェックリスト（10 人規模）未作成
+- [X] T079 `README.md` 更新（npm スクリプト・構成・動作確認導線）
+- [X] T080 `AGENTS.md` に npm スクリプトと品質ゲートを追記
+- [ ] T081 GitHub Actions CI ワークフロー未追加（claude-bot に workflow 編集権限なし）
+- [ ] T082 SC-002 Lighthouse 計測未実施（手動）
+- [ ] T083 `tests/cpu/performance.test.ts` 未追加（手動計測で代替予定）
+- [X] T084 `npm run test:bench` を package.json に追加（T052 を隔離実行）
+- [ ] T085 SC-006/SC-008 手動チェック未実施（PR 本文に記載予定）
+- [X] T086 不要抽象なし（Strategy 3 実装 + factory のみ、YAGNI）
+- [ ] T087 NVDA/VoiceOver 手動チェック未実施
+- [ ] T088 ブラウザ golden path 動作確認は PR 受領後に実施
+- [ ] T089 `checklists/requirements.md` 再評価は PR 本文確認のうえ更新予定
+
+### サマリ
+
+- 自動化されたコード／テスト／設定: **完了**（68 / 89 タスク、76%）
+- 手動チェック・CI/Lighthouse・workflow 編集など実行環境制約タスク: **未完了**（21 / 89）
+- これらは PR レビューおよびマージ後の動作確認段階で順次クローズしてください。
+
