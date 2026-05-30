@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import { createStrategy } from "@/cpu";
 import { legalMoves } from "@/game/game";
+import { getDefaultProfile } from "@/game/types";
 import type { Coord, PlayerProfile } from "@/game/types";
 import { loadProfile, saveProfile } from "@/lib/persistence";
 import {
@@ -28,7 +29,7 @@ export function useMatch(initialProfile?: PlayerProfile): {
     matchReducer,
     initialProfile ?? null,
     (seed) =>
-      seed ? initialMatchState(seed) : initialMatchState(loadProfile()),
+      seed ? initialMatchState(seed) : initialMatchState(getDefaultProfile()),
   );
 
   // On first mount in the browser, hydrate from localStorage if no initial
